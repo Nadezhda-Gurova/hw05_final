@@ -1,0 +1,14 @@
+{% extends "misc/base.html" %}
+{% block content %}
+    <main role="main" class="container">
+        <div class="row">
+            <div class="col-md-3 mb-3 mt-1">
+                {% include 'misc/authors_card.html' %}
+            </div>
+            <div class="col-md-9">
+                {% include 'misc/post_card.html' %}
+                {% include 'misc/comments.html' %}
+            </div>
+        </div>
+    </main>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "misc/base.html" %}
+{% block title %}Новая запись{% endblock %}
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-8 p-5">
+            <div class="card">
+                {% url 'new_post' as new_post %}
+                {% if request.path == new_post %}
+                    {% url 'new_post' %}
+                    <div class="card-header">Добавить запись</div>
+                    <div class="card-body">
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            {{ form.as_p }}
+                            <button type="submit" class="btn btn-primary"> Добавить</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <div class="card-header">Редактировать запись</div>
+                    <div class="card-body">
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            {{ form.as_p }}
+                            <button type="submit" class="btn btn-primary"> Сохранить</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

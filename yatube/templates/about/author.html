@@ -1,0 +1,38 @@
+<!-- templates/about/author.html -->
+{% extends "misc/base.html" %}
+{% block title %}Автор проект - Надежда Гурова{% endblock %}
+{% block content %}
+  <div class="row">
+    <!-- Левый вспомогательный блок -->
+    <div class="col-md-3 mb-3 mt-1">
+      <div class="card">
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item">
+              <div class="h3">
+                Автор: Надежда Гурова
+              </div>
+            </li>
+            <li class="list-group-item">
+              <div class="h6 text-muted">
+                <p>Студентка Яндекс Практикума</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <!-- Тело страницы -->
+    <div class="col-md-9">
+      <div class="card-body">
+        <div class="card-text">
+          <p>Программирование - наше все!</p>
+            <p><a href="https://github.com/Nadezhda-Gurova?tab=projects" target="_blank">Посмотреть другие проекты!</a></p>
+
+            {% load static %}
+            <img src="{% static 'cat.jpg' %}" alt="My image" width="700" height="500">
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
