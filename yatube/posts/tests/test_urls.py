@@ -3,7 +3,9 @@ from http import HTTPStatus
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.core.cache import cache
+from django.urls import reverse
 
+from .. import views
 from ..models import Group, Post, User
 
 
@@ -31,7 +33,7 @@ class TaskURLTests(TestCase):
             slug=self.test_slug,
             description='Тестовое описание группы'
         )
-        self.post = Post.objects.create(author=self.user,
+        self.post = Post.objects.create(author=self.user_2,
                                         text='Тестовый текст поста',
                                         group=self.group)
 
@@ -40,10 +42,9 @@ class TaskURLTests(TestCase):
             self.homepage: HTTPStatus.OK,
             self.group_page: HTTPStatus.OK,
             self.new_page: HTTPStatus.OK,
-            f'/{self.user.username}/': HTTPStatus.OK,
-            f'/{self.user.username}/{self.post.id}/': HTTPStatus.OK,
-            f'/{self.user.username}/{self.post.id}/edit/':
-                HTTPStatus.FOUND,
+            f'/{self.user_2.username}/': HTTPStatus.OK,
+            f'/{self.user_2.username}/{self.post.id}/': HTTPStatus.OK,
+            f'/{self.user_2.username}/{self.post.id}/edit/': HTTPStatus.OK,
         }
         for url_address, response_code in pages.items():
             with self.subTest(address=url_address):
@@ -55,26 +56,27 @@ class TaskURLTests(TestCase):
             self.homepage: HTTPStatus.OK,
             self.group_page: HTTPStatus.OK,
             self.new_page: HTTPStatus.FOUND,
-            f'/{self.user.username}/': HTTPStatus.OK,
-            f'/{self.user.username}/{self.post.id}/': HTTPStatus.OK,
-            f'/{self.user.username}/{self.post.id}/edit/':
-                HTTPStatus.FOUND,
+            f'/{self.user_2.username}/': HTTPStatus.OK,
+            f'/{self.user_2.username}/{self.post.id}/': HTTPStatus.OK,
             f'/{self.user_2.username}/{self.post.id}/edit/':
                 HTTPStatus.FOUND,
             self.page_not_found: HTTPStatus.NOT_FOUND,
-            self.page_server_error: HTTPStatus.INTERNAL_SERVER_ERROR,
         }
         for url_address, response_code in pages.items():
             with self.subTest(address=url_address):
                 response = self.guest_client.get(url_address)
                 self.assertEqual(response.status_code, response_code)
 
+    def test_template_for_500(self):
+        response = self.authorized_client.get(reverse(views.server_error))
+        self.assertTemplateUsed(response, 'misc/500.html')
+
     def test_urls_uses_correct_template(self):
         templates_url_names = {
             'misc/index.html': self.homepage,
             'posts/group.html': self.group_page,
             'posts/new.html': self.new_page,
-            'posts/post.html': f'/{self.user.username}/{self.post.id}/',
+            'posts/post.html': f'/{self.user_2.username}/{self.post.id}/',
         }
         for template, address in templates_url_names.items():
             with self.subTest(adress=address):

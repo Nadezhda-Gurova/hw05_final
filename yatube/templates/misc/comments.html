@@ -1,6 +1,5 @@
 <!-- Форма добавления комментария -->
 {% load user_filters %}
-
 {% if user.is_authenticated %}
   <div class="card my-4">
     <form action="{% url 'add_comment' post.author.username post.id %}" method="post">

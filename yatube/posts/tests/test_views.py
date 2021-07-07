@@ -9,7 +9,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.cache.utils import make_template_fragment_key
 
-from ..models import Group, Post, User
+from ..models import Group, Post, User, Follow, Comment
 
 TEMP_MEDIA = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -229,17 +229,20 @@ class PaginatorViewsTest(TestCase):
         self.assertEqual(len(response.context.get('page')), 10)
 
     def test_index_second_page_contains_three_records(self):
+        cache.clear()
         # Проверка: на второй странице должно быть три поста.
         response = self.client.get(reverse(self.home_page) + '?page=2')
         self.assertEqual(len(response.context.get('page')), 3)
 
     def test_group_first_page_contains_ten_records(self):
+        cache.clear()
         response = self.client.get(
             reverse(self.group_page, kwargs={'slug': self.test_slug}))
         # Проверка: количество постов на первой странице равно 10.
         self.assertEqual(len(response.context.get('page')), 10)
 
     def test_group_second_page_contains_three_records(self):
+        cache.clear()
         # Проверка: на второй странице должно быть три поста.
         response = self.client.get(
             reverse(self.group_page, kwargs={'slug': self.test_slug}) +
@@ -263,19 +266,80 @@ class CacheTest(TaskPagesTests, TestCase):
 
     def test_cache_index_check(self):
         cache.clear()
-        response = self.authorized_client.get(reverse(self.home_page))
+        response = self.client.get(reverse(self.home_page))
         page = response.context['page']
         paginator = page.paginator
         self.assertEqual(paginator.num_pages, 1)
         self.assertEqual(page[0].text, self.post_2.text)
         self.assertEqual(page[0].author, self.post_2.author)
         self.post_2.delete()
-        response = self.authorized_client.get(reverse(self.home_page))
-        page_2 = response.context['page']
-        self.assertEqual(len(page), len(page_2))
-        for i in range(0, len(page)):
-            self.assertEqual(page[i].id, page_2[i].id)
+        response_2 = self.authorized_client.get(reverse(self.home_page))
+        self.assertEqual(response.content, response_2.content)
+        self.assertEqual(response_2.context, None)
+        cache.clear()
+        response_3 = self.authorized_client.get(reverse(self.home_page))
+        self.assertNotEqual(response_3.context, None)
+        self.assertEqual(response_3.context['page'][0].text, self.post.text)
 
-class SubscriptionToAuthors(TaskPagesTests, TestCase):
-    pass
 
+class SubscriptionToAuthors(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='StasBasov')
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.user)
+        self.user_2 = User.objects.create_user(username='BorisKrasov')
+        self.authorized_client_2 = Client()
+        self.authorized_client_2.force_login(self.user_2)
+        self.user_3 = User.objects.create_user(username='Lars von Trier')
+        self.authorized_client_3 = Client()
+        self.authorized_client_3.force_login(self.user_3)
+        self.user_4 = User.objects.create_user(username='Jehanne Darc')
+        self.authorized_client_4 = Client()
+        self.authorized_client_4.force_login(self.user_4)
+        self.follow_page = 'follow_index'
+        self.post = Post.objects.create(author=self.user,
+                                        text='Тестовый текст поста',)
+        self.post_2 = Post.objects.create(author=self.user_4,
+                                        text='Тестовый текст поста 4', )
+        self.url_comment = reverse('add_comment', kwargs={
+            'username': self.post.author.username, 'post_id': self.post.id})
+
+    def test_subscribe_to_user(self):
+        Follow.objects.get_or_create(author=self.user, user=self.user_4)
+        response = self.authorized_client.get(reverse(self.follow_page))
+        following_author_posts = response.context['page']
+        self.assertEqual(len(following_author_posts), self.user.posts.count())
+        self.assertEqual(following_author_posts[0].text, self.post.text)
+        self.assertEqual(following_author_posts[0].author, self.post.author)
+
+    def test_unsubscribe_to_user(self):
+        Follow.objects.filter(author=self.user).delete()
+        response = self.authorized_client.get(reverse(self.follow_page))
+        following_author_posts = response.context['page']
+        self.assertEqual(len(following_author_posts), 0)
+
+    def test_new_post_visible_to_subscribers(self):
+        Follow.objects.get_or_create(author=self.user, user=self.user_2)
+        Follow.objects.get_or_create(author=self.user, user=self.user_3)
+        new_post = Post.objects.create(author=self.user, text='Создали новый пост')
+        response = self.authorized_client_2.get(reverse(self.follow_page))
+        following_author_post = response.context['page'][0]
+        self.assertEqual(following_author_post.text, new_post.text)
+        self.assertEqual(following_author_post.author, new_post.author)
+        response_2 = self.authorized_client_3.get(reverse(self.follow_page))
+        following_author_posts = response_2.context['page'][0]
+        self.assertEqual(following_author_posts.text, new_post.text)
+        self.assertEqual(following_author_posts.author, new_post.author)
+        response_3 = self.authorized_client_4.get(reverse(self.follow_page))
+        following_author_posts = response_3.context['page']
+        self.assertEqual(len(following_author_posts), 0)
+
+    def test_comments_authorized_user(self):
+        response = reverse('add_comment', kwargs={
+            'username': self.post.author.username, 'post_id': self.post.id})
+        form_data = {
+            'text': 'Оставили новый комментарий',
+        }
+        response_2 = self.authorized_client.post(self.url_comment, follow=True, data=form_data)
+        self.assertContains(response_2, form_data['text'])

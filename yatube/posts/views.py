@@ -34,7 +34,7 @@ def profile(request, username):
     paginator = Paginator(user.posts.all(), settings.NUMBER_OF_POSTS_ON_PAGE)
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
-    following = user.is_authenticated and (Follow.objects.filter(
+    following = request.user.is_authenticated and (Follow.objects.filter(
         user=request.user, author=user).exists()
                                            )
     return render(request, 'misc/profile.html', {
@@ -90,14 +90,14 @@ def page_not_found(request, exception=None):
     # выводить её в шаблон пользователской страницы 404 мы не станем
     return render(
         request,
-        "misc/404.html",
-        {"path": request.path},
+        'misc/404.html',
+        {'path': request.path},
         status=404
     )
 
 
 def server_error(request):
-    return render(request, "misc/500.html", status=500)
+    return render(request, 'misc/500.html', status=500)
 
 
 def add_comment(request, username, post_id):
@@ -124,7 +124,7 @@ def follow_index(request):
     paginator = Paginator(posts, settings.NUMBER_OF_POSTS_ON_PAGE)
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
-    return render(request, "posts/follow.html", {'page': page, })
+    return render(request, 'posts/follow.html', {'page': page, })
 
 
 @login_required
@@ -135,8 +135,9 @@ def profile_follow(request, username):
         Follow.objects.get_or_create(author=author, user=user)
     return redirect('profile', username=username)
 
+
 @login_required
 def profile_unfollow(request, username):
     author = get_object_or_404(User, username=username)
-    Follow.objects.filter(author=author).delete()
+    Follow.objects.filter(author=author, user=request.user).delete()
     return redirect('profile', username=username)
