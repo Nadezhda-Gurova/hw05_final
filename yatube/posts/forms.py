@@ -17,5 +17,4 @@ class CommentForm(ModelForm):
         help_texts = {
             'text': ('Оставить комментарий'),
         }
-        widgets ={'text': Textarea(attrs={'cols':80, 'rows': 20}),
-                  }
+        widgets = {'text': Textarea(attrs={'cols': 80, 'rows': 20})}

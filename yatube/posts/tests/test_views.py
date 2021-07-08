@@ -4,12 +4,11 @@ import tempfile
 from django import forms
 from django.conf import settings
 from django.core.cache import cache
-from django.core.cache.utils import make_template_fragment_key
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from ..models import Comment, Follow, Group, Post, User
+from ..models import Follow, Group, Post, User
 
 TEMP_MEDIA = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -245,8 +244,8 @@ class PaginatorViewsTest(TestCase):
         cache.clear()
         # Проверка: на второй странице должно быть три поста.
         response = self.client.get(
-            reverse(self.group_page, kwargs={'slug': self.test_slug}) +
-            '?page=2')
+            reverse(self.group_page, kwargs={'slug': self.test_slug})
+            + '?page=2')
         self.assertEqual(len(response.context.get('page')), 3)
 
     def test_profile_first_page_contains_ten_records(self):
@@ -337,7 +336,7 @@ class SubscriptionToAuthors(TestCase):
         self.assertEqual(len(following_author_posts), 0)
 
     def test_comments_authorized_user(self):
-        response = reverse('add_comment', kwargs={
+        reverse('add_comment', kwargs={
             'username': self.post.author.username, 'post_id': self.post.id})
         form_data = {
             'text': 'Оставили новый комментарий',
