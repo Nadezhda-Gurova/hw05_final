@@ -299,9 +299,9 @@ class SubscriptionToAuthors(TestCase):
         self.authorized_client_4.force_login(self.user_4)
         self.follow_page = 'follow_index'
         self.post = Post.objects.create(author=self.user,
-                                        text='Тестовый текст поста',)
+                                        text='Тестовый текст поста', )
         self.post_2 = Post.objects.create(author=self.user_4,
-                                        text='Тестовый текст поста 4', )
+                                          text='Тестовый текст поста 4', )
         self.url_comment = reverse('add_comment', kwargs={
             'username': self.post.author.username, 'post_id': self.post.id})
 
@@ -322,7 +322,8 @@ class SubscriptionToAuthors(TestCase):
     def test_new_post_visible_to_subscribers(self):
         Follow.objects.get_or_create(author=self.user, user=self.user_2)
         Follow.objects.get_or_create(author=self.user, user=self.user_3)
-        new_post = Post.objects.create(author=self.user, text='Создали новый пост')
+        new_post = Post.objects.create(author=self.user,
+                                       text='Создали новый пост')
         response = self.authorized_client_2.get(reverse(self.follow_page))
         following_author_post = response.context['page'][0]
         self.assertEqual(following_author_post.text, new_post.text)
@@ -341,5 +342,6 @@ class SubscriptionToAuthors(TestCase):
         form_data = {
             'text': 'Оставили новый комментарий',
         }
-        response_2 = self.authorized_client.post(self.url_comment, follow=True, data=form_data)
+        response_2 = self.authorized_client.post(self.url_comment, follow=True,
+                                                 data=form_data)
         self.assertContains(response_2, form_data['text'])

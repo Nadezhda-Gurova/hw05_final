@@ -36,7 +36,7 @@ def profile(request, username):
     page = paginator.get_page(page_number)
     following = request.user.is_authenticated and (Follow.objects.filter(
         user=request.user, author=user).exists()
-                                           )
+                                                   )
     return render(request, 'misc/profile.html', {
         'number_of_posts': number_of_posts, 'page': page, 'author': user,
         'following': following,
@@ -44,12 +44,13 @@ def profile(request, username):
 
 
 def post_view(request, username, post_id):
-    post = get_object_or_404(Post.objects.select_related('author'), id=post_id, author__username=username)
+    post = get_object_or_404(Post.objects.select_related('author'), id=post_id,
+                             author__username=username)
     form = CommentForm()
     comments = post.comments.all()
     return render(request, 'posts/post.html', {
-        'number_of_posts': post.author.posts.count(), 'post': post, 'author': post.author,
-        'form': form, 'comments': comments
+        'number_of_posts': post.author.posts.count(), 'post': post,
+        'author': post.author, 'form': form, 'comments': comments
     })
 
 
@@ -84,8 +85,6 @@ def post_edit(request, username, post_id):
 
 
 def page_not_found(request, exception=None):
-    # Переменная exception содержит отладочную информацию,
-    # выводить её в шаблон пользователской страницы 404 мы не станем
     return render(
         request,
         'misc/404.html',
@@ -109,14 +108,14 @@ def add_comment(request, username, post_id):
         comment.post = post
         comment.save()
         return redirect('posts', username, post_id)
-    return render(request, 'misc/comments.html', {'form': form,
-                                                  'comments': comments, 'post': post}
+    return render(request, 'misc/comments.html', {
+        'form': form, 'comments': comments, 'post': post
+    }
                   )
 
 
 @login_required
 def follow_index(request):
-    # информация о текущем пользователе доступна в переменной request.user
     following = Follow.objects.filter(user=request.user)
     posts = Post.objects.filter(author__following__user=request.user)
     paginator = Paginator(posts, settings.NUMBER_OF_POSTS_ON_PAGE)

@@ -35,6 +35,7 @@ class PostFormTests(TestCase):
             content=cls.small_gif,
             content_type='image/gif'
         )
+
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(TEMP_MEDIA, ignore_errors=True)
@@ -64,7 +65,8 @@ class PostFormTests(TestCase):
         self.assertTrue(Post.objects.filter(text=form_data['text'],
                                             group=form_data['group'],
                                             image='posts/small.gif').exists())
-        self.assertTrue(response.context['page'][0].image.name, self.image.name)
+        self.assertTrue(response.context['page'][0].image.name,
+                        self.image.name)
 
     def test_post_edit(self):
         form_data = {
