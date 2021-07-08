@@ -6,10 +6,12 @@
       {% csrf_token %}
       <h5 class="card-header">Добавить комментарий:</h5>
       <div class="card-body">
+          <form>
         <div class="form-group">
           {{ form.text|addclass:"form-control" }}
         </div>
         <button type="submit" class="btn btn-primary">Отправить</button>
+            </form>
       </div>
     </form>
   </div>
@@ -26,6 +28,9 @@
         >{{ item.author.username }}</a>
       </h5>
       <p>{{ item.text|linebreaksbr }}</p>
+       <small class="text-muted">
+           {{ item.created|date:'d E Y г. H:i' }}
+       </small>
     </div>
   </div>
 {% endfor %}

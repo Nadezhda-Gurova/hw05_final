@@ -4,8 +4,8 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import cache_page
 
-from .forms import PostForm, CommentForm
-from .models import Group, Post, User, Follow
+from .forms import CommentForm, PostForm
+from .models import Follow, Group, Post, User
 
 
 @cache_page(20)
@@ -44,13 +44,11 @@ def profile(request, username):
 
 
 def post_view(request, username, post_id):
-    user = get_object_or_404(User, username=username)
-    number_of_posts = Post.objects.filter(author_id=user.id).count()
-    post = get_object_or_404(Post, id=post_id, author_id=user.id)
+    post = get_object_or_404(Post.objects.select_related('author'), id=post_id, author__username=username)
     form = CommentForm()
     comments = post.comments.all()
     return render(request, 'posts/post.html', {
-        'number_of_posts': number_of_posts, 'post': post, 'author': user,
+        'number_of_posts': post.author.posts.count(), 'post': post, 'author': post.author,
         'form': form, 'comments': comments
     })
 
@@ -100,19 +98,19 @@ def server_error(request):
     return render(request, 'misc/500.html', status=500)
 
 
+@login_required
 def add_comment(request, username, post_id):
-    post = get_object_or_404(Post, pk=post_id, author__username=username)
+    post = get_object_or_404(Post, id=post_id, author__username=username)
     comments = post.comments.all()
-    form = CommentForm(request.POST or None,
-                       files=request.FILES or None, )
+    form = CommentForm(request.POST or None)
     if form.is_valid():
-        new_comment = form.save(commit=False)
-        new_comment.author = request.user
-        new_comment.post = post
-        form.save()
+        comment = form.save(commit=False)
+        comment.author = request.user
+        comment.post = post
+        comment.save()
         return redirect('posts', username, post_id)
     return render(request, 'misc/comments.html', {'form': form,
-                                                  'comments': comments}
+                                                  'comments': comments, 'post': post}
                   )
 
 

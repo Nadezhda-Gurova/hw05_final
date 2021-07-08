@@ -2,14 +2,14 @@ import shutil
 import tempfile
 
 from django import forms
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, TestCase, override_settings
-from django.urls import reverse
 from django.conf import settings
 from django.core.cache import cache
 from django.core.cache.utils import make_template_fragment_key
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase, override_settings
+from django.urls import reverse
 
-from ..models import Group, Post, User, Follow, Comment
+from ..models import Comment, Follow, Group, Post, User
 
 TEMP_MEDIA = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -307,7 +307,7 @@ class SubscriptionToAuthors(TestCase):
 
     def test_subscribe_to_user(self):
         Follow.objects.get_or_create(author=self.user, user=self.user_4)
-        response = self.authorized_client.get(reverse(self.follow_page))
+        response = self.authorized_client_4.get(reverse(self.follow_page))
         following_author_posts = response.context['page']
         self.assertEqual(len(following_author_posts), self.user.posts.count())
         self.assertEqual(following_author_posts[0].text, self.post.text)
@@ -315,7 +315,7 @@ class SubscriptionToAuthors(TestCase):
 
     def test_unsubscribe_to_user(self):
         Follow.objects.filter(author=self.user).delete()
-        response = self.authorized_client.get(reverse(self.follow_page))
+        response = self.authorized_client_4.get(reverse(self.follow_page))
         following_author_posts = response.context['page']
         self.assertEqual(len(following_author_posts), 0)
 

@@ -1,8 +1,8 @@
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
 from django.core.cache import cache
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from .. import views
@@ -66,10 +66,6 @@ class TaskURLTests(TestCase):
             with self.subTest(address=url_address):
                 response = self.guest_client.get(url_address)
                 self.assertEqual(response.status_code, response_code)
-
-    def test_template_for_500(self):
-        response = self.authorized_client.get(reverse(views.server_error))
-        self.assertTemplateUsed(response, 'misc/500.html')
 
     def test_urls_uses_correct_template(self):
         templates_url_names = {

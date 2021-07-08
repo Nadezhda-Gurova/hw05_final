@@ -6,8 +6,8 @@
                 {% include 'misc/authors_card.html' %}
             </div>
             <div class="col-md-9">
-                {% include 'misc/post_item.html' %}
-                {% include 'misc/comments.html' %}
+                {% include 'misc/post_item.html' with post=post %}
+                {% include 'misc/comments.html' with post=post form=form comments=comments %}
             </div>
         </div>
     </main>
