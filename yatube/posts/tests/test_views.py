@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+from http import HTTPStatus
 
 from django import forms
 from django.conf import settings
@@ -8,7 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from ..models import Follow, Group, Post, User
+from ..models import Group, Post, User
 
 TEMP_MEDIA = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -41,24 +42,25 @@ class TaskPagesTests(TestCase):
             b'\x02\x00\x01\x00\x00\x02\x02\x0C'
             b'\x0A\x00\x3B'
         )
-        self.image = SimpleUploadedFile("pic.gif", self.small_gif,
-                                        content_type="image/gif")
+        self.image = SimpleUploadedFile(
+            "pic.gif", self.small_gif, content_type="image/gif"
+        )
         self.group = Group.objects.create(
-            title='Тестовый заголовок',
-            slug=self.test_slug,
-            description='Тестовое описание группы')
-        self.post = Post.objects.create(author=self.user,
-                                        text='Тестовый текст поста',
-                                        group=self.group,
-                                        image=self.image)
+            title='Тестовый заголовок', slug=self.test_slug,
+            description='Тестовое описание группы'
+        )
+        self.post = Post.objects.create(
+            author=self.user, text='Тестовый текст поста',
+            group=self.group, image=self.image
+        )
         self.group_2 = Group.objects.create(
-            title='Тестовый заголовок 2',
-            slug=self.test_slug_2,
-            description='Тестовое описание группы 2')
-        self.post_2 = Post.objects.create(author=self.user,
-                                          text='Тестовый текст поста 2',
-                                          group=self.group_2,
-                                          image=self.image)
+            title='Тестовый заголовок 2', slug=self.test_slug_2,
+            description='Тестовое описание группы 2'
+        )
+        self.post_2 = Post.objects.create(
+            author=self.user, text='Тестовый текст поста 2',
+            group=self.group_2, image=self.image
+        )
 
     def test_pages_use_correct_template(self):
         """Функция проверяет шаблон при обращении к view-классам."""
@@ -104,9 +106,10 @@ class TaskPagesTests(TestCase):
         """Функция проверяет словарь контекста страницы поста."""
         response = self.authorized_client.get(reverse(self.post_page, kwargs={
             'username': self.user.username, 'post_id': self.post.id}))
-        profile = {'author': self.post.author,
-                   'number_of_posts': self.user.posts.count(),
-                   'post': self.post}
+        profile = {
+            'author': self.post.author, 'number_of_posts':
+                self.user.posts.count(), 'post': self.post
+        }
         for value, expect in profile.items():
             with self.subTest(value=value):
                 context = response.context[value]
@@ -284,63 +287,88 @@ class CacheTest(TaskPagesTests, TestCase):
 class SubscriptionToAuthors(TestCase):
     def setUp(self):
         cache.clear()
-        self.user = User.objects.create_user(username='StasBasov')
+        self.guest_client = Client()
+        self.author = User.objects.create_user(username='StasBasov')
         self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
-        self.user_2 = User.objects.create_user(username='BorisKrasov')
-        self.authorized_client_2 = Client()
-        self.authorized_client_2.force_login(self.user_2)
-        self.user_3 = User.objects.create_user(username='Lars von Trier')
-        self.authorized_client_3 = Client()
-        self.authorized_client_3.force_login(self.user_3)
-        self.user_4 = User.objects.create_user(username='Jehanne Darc')
-        self.authorized_client_4 = Client()
-        self.authorized_client_4.force_login(self.user_4)
+        self.authorized_client.force_login(self.author)
+        self.first_subscriber = User.objects.create_user(
+            username='BorisKrasov')
+        self.first_subscriber_authorization = Client()
+        self.first_subscriber_authorization.force_login(self.first_subscriber)
+        self.second_subscriber = User.objects.create_user(
+            username='Lars von Trier')
+        self.second_subscriber_authorization = Client()
+        self.second_subscriber_authorization.force_login(
+            self.second_subscriber)
+        self.third_subscriber = User.objects.create_user(
+            username='Jehanne Darc')
+        self.third_subscriber_authorization = Client()
+        self.third_subscriber_authorization.force_login(self.third_subscriber)
         self.follow_page = 'follow_index'
-        self.post = Post.objects.create(author=self.user,
-                                        text='Тестовый текст поста', )
-        self.post_2 = Post.objects.create(author=self.user_4,
-                                          text='Тестовый текст поста 4', )
+        self.profile = 'profile'
+        self.profile_follow = 'profile_follow'
+        self.profile_unfollow = 'profile_unfollow'
+        self.author_post = Post.objects.create(
+            author=self.author, text='Тестовый текст поста',
+        )
+        self.third_subscriber_post = Post.objects.create(
+            author=self.third_subscriber,
+            text='Тестовый текст поста третьего подписчика',
+        )
         self.url_comment = reverse('add_comment', kwargs={
-            'username': self.post.author.username, 'post_id': self.post.id})
+            'username': self.author_post.author.username,
+            'post_id': self.author_post.id
+        })
 
     def test_subscribe_to_user(self):
-        Follow.objects.get_or_create(author=self.user, user=self.user_4)
-        response = self.authorized_client_4.get(reverse(self.follow_page))
-        following_author_posts = response.context['page']
-        self.assertEqual(len(following_author_posts), self.user.posts.count())
-        self.assertEqual(following_author_posts[0].text, self.post.text)
-        self.assertEqual(following_author_posts[0].author, self.post.author)
+        self.third_subscriber_authorization.get(reverse(
+            self.profile_follow, kwargs={'username': self.author.username}))
+        response = self.third_subscriber_authorization.get(reverse(
+            self.profile, kwargs={'username': self.author.username}))
+        self.assertEqual(response.context['following'], 1)
 
     def test_unsubscribe_to_user(self):
-        Follow.objects.filter(author=self.user).delete()
-        response = self.authorized_client_4.get(reverse(self.follow_page))
-        following_author_posts = response.context['page']
-        self.assertEqual(len(following_author_posts), 0)
+        self.third_subscriber_authorization.get(reverse(
+            self.profile_unfollow, kwargs={'username': self.author.username}))
+        response = self.third_subscriber_authorization.get(reverse(
+            self.profile, kwargs={'username': self.author.username}))
+        self.assertEqual(response.context['following'], 0)
 
     def test_new_post_visible_to_subscribers(self):
-        Follow.objects.get_or_create(author=self.user, user=self.user_2)
-        Follow.objects.get_or_create(author=self.user, user=self.user_3)
-        new_post = Post.objects.create(author=self.user,
+        self.first_subscriber_authorization.get(reverse(
+            self.profile_follow, kwargs={'username': self.author.username}))
+        self.second_subscriber_authorization.get(reverse(
+            self.profile_follow, kwargs={'username': self.author.username}))
+        new_post = Post.objects.create(author=self.author,
                                        text='Создали новый пост')
-        response = self.authorized_client_2.get(reverse(self.follow_page))
+        response = self.first_subscriber_authorization.get(
+            reverse(self.follow_page))
         following_author_post = response.context['page'][0]
         self.assertEqual(following_author_post.text, new_post.text)
         self.assertEqual(following_author_post.author, new_post.author)
-        response_2 = self.authorized_client_3.get(reverse(self.follow_page))
+        response_2 = self.second_subscriber_authorization.get(
+            reverse(self.follow_page))
         following_author_posts = response_2.context['page'][0]
         self.assertEqual(following_author_posts.text, new_post.text)
         self.assertEqual(following_author_posts.author, new_post.author)
-        response_3 = self.authorized_client_4.get(reverse(self.follow_page))
+        response_3 = self.third_subscriber_authorization.get(
+            reverse(self.follow_page))
         following_author_posts = response_3.context['page']
         self.assertEqual(len(following_author_posts), 0)
 
     def test_comments_authorized_user(self):
         reverse('add_comment', kwargs={
-            'username': self.post.author.username, 'post_id': self.post.id})
+            'username': self.author_post.author.username,
+            'post_id': self.author_post.id
+        })
         form_data = {
             'text': 'Оставили новый комментарий',
         }
         response_2 = self.authorized_client.post(self.url_comment, follow=True,
                                                  data=form_data)
         self.assertContains(response_2, form_data['text'])
+
+    def test_comments_unauthorized_user(self):
+        response = self.guest_client.get(self.url_comment)
+        urls = '/auth/login/?next={}'.format(self.url_comment)
+        self.assertRedirects(response, urls, status_code=HTTPStatus.FOUND)
